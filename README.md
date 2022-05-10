@@ -54,14 +54,14 @@ public class CoyeeCacheConfig extends CoyeeCacheAspectSupport {
 ````
 4.  在方法中添加管理缓存的注解代码
 
-######使用缓存
+####使用缓存
 ```java 
 //代表该方法返回的数据涉及A,B,C三张表
 @Cache(channels={"A","B","C"})
 public R<IPage<Info>> paging(InfoDTO info, Query query);
 ```
 
-######更新缓存
+####更新缓存
 ```java 
 //代表该方法会更新C表的数据，引用C表数据的所有缓存将会失效
 @Flush(channels={"C"})
