@@ -1,0 +1,10 @@
+com\coyee\cache\bean\Partition.class
+com\coyee\cache\generator\CacheKeyGenerator.class
+com\coyee\cache\annotation\Cache.class
+com\coyee\cache\utils\JSONUtils.class
+com\coyee\cache\annotation\Flush.class
+com\coyee\cache\store\MapCacheTemplate.class
+com\coyee\cache\bean\PartitionType.class
+com\coyee\cache\exception\CacheException.class
+com\coyee\cache\store\ICacheTemplate.class
+com\coyee\cache\bean\KeyGenerator.class

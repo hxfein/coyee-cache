@@ -1,0 +1,4 @@
+test\service\TestService.class
+test\config\MainConfig.class
+test\service\TestServiceImpl.class
+test\DemoApplication.class
