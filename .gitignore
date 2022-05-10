@@ -23,3 +23,8 @@ target/
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+coyee-cache-core.iml
+coyee-cache-mybatis.iml
+coyee-cache-redis.iml
+coyee-cache-test.iml
+coyee-cache.iml

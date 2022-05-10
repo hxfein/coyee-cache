@@ -29,10 +29,4 @@
         </dependency>
     </dependencies>
 
-    <distributionManagement>
-        <repository>
-            <id>dayuding2022</id>
-            <url>http://maven.wisesoft.net.cn/nexus/content/repositories/dayuding2022</url>
-        </repository>
-    </distributionManagement>
 </project>
