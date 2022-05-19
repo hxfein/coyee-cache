@@ -19,6 +19,7 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 拦截mybatis底层执行的SQL，刷新相应栏目的缓存
@@ -39,9 +40,26 @@ public class CoyeeCacheFlushInterceptor implements Interceptor {
     private static Log log = LogFactory.getLog(CoyeeCacheFlushInterceptor.class);
 
     private CoyeeCacheSupport coyeeCacheSupport;
+    /**
+     * 关注的数据表
+     */
+    private Set<String> tables=new HashSet<>();
 
-    public CoyeeCacheFlushInterceptor(CoyeeCacheSupport coyeeCacheSupport) {
+    /**
+     * 初始化拦截器
+     * @param coyeeCacheSupport 缓存操作类
+     * @param tables 关注变化的数据表
+     */
+    public CoyeeCacheFlushInterceptor(CoyeeCacheSupport coyeeCacheSupport,Set<String> tables) {
         this.coyeeCacheSupport = coyeeCacheSupport;
+        if(tables!=null){
+            tables.forEach((table)->{
+                if(StringUtils.isNotBlank(table)){
+                    String lowerTable=table.toLowerCase();
+                    this.tables.add(lowerTable);
+                }
+            });
+        }
     }
 
     @Override
@@ -77,7 +95,9 @@ public class CoyeeCacheFlushInterceptor implements Interceptor {
     private void flushCacheOfTable(Table table){
         if(table!=null){
             String tableName=StringUtils.lowerCase(table.getName());
-            coyeeCacheSupport.flushChannelKeysAndCache(new String[]{tableName});
+            if(tables.contains(tableName)) {
+                coyeeCacheSupport.flushChannelKeysAndCache(new String[]{tableName});
+            }
         }
     }
 
@@ -131,25 +151,4 @@ public class CoyeeCacheFlushInterceptor implements Interceptor {
 
     }
 
-//    public static void main(String args[]) throws Exception {
-//        CoyeeCacheFlushInterceptor bean = new CoyeeCacheFlushInterceptor(null);
-//        String sql = "UPDATE pay.pay_order a\n" +
-//                "  JOIN (\n" +
-//                "         SELECT\n" +
-//                "           t.id                                                     order_id,\n" +
-//                "           b.id                                                     house_id,\n" +
-//                "           ifnull(c.company_id, 'a0000000000000000000000000000000') company_id\n" +
-//                "         FROM pay_order t\n" +
-//                "           LEFT JOIN room b\n" +
-//                "             ON t.room_id = b.id\n" +
-//                "           LEFT JOIN house_company_mapping c\n" +
-//                "             ON b.house_id = c.house_id\n" +
-//                "\n" +
-//                "         WHERE t.company_id = 'a0000000000000000000000000000000'\n" +
-//                "               ) temp\n" +
-//                "    ON a.id = temp.order_id\n" +
-//                "SET a.company_id = temp.company_id;";
-//        Table table = bean.getUpdateTable(sql);
-//        System.out.println(table);
-//    }
 }
