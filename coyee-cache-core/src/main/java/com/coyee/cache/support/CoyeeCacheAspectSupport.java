@@ -175,8 +175,10 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
         }
         for (String channel : channels) {
             Set<String> keySet = cacheTemplate.keysOfChannel(channel);
-            cacheTemplate.delete(keySet);
-            cacheTemplate.deleteChannel(channel);
+            if(keySet.isEmpty()==false) {
+                cacheTemplate.delete(keySet);
+                cacheTemplate.deleteChannel(channel);
+            }
         }
     }
 
