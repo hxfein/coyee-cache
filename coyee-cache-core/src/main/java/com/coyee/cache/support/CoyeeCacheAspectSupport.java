@@ -1,5 +1,6 @@
 package com.coyee.cache.support;
 
+import com.coyee.cache.bean.Data;
 import com.coyee.cache.bean.KeyGenerator;
 import com.coyee.cache.exception.CacheException;
 import com.coyee.cache.generator.CacheKeyGenerator;
@@ -24,7 +25,6 @@ import javax.annotation.Resource;
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.Set;
 
 /**
  * 缓存管理器
@@ -71,30 +71,26 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
         MethodInvocationProceedingJoinPoint methodJp = (MethodInvocationProceedingJoinPoint) jp;
         Cache config = this.getMethodAnnotation(methodJp, Cache.class);
         String key = createKey(methodJp, config);
-        Serializable cacheData = cacheTemplate.get(key);
-        if (cacheData != null) {
-            if (log.isDebugEnabled()) {
-                log.debug("使用key[" + key + "]从缓存中取得数据，直接返回");
+        Object data = cacheTemplate.get(key);
+        if (data != null) {
+            if (data instanceof Data) {
+                if (log.isDebugEnabled()) {
+                    log.debug("使用key[" + key + "]从缓存中取得数据，直接返回");
+                }
+                return ((Data) data).getRawData();
             }
-            return cacheData;
         }
         if (log.isDebugEnabled()) {
             log.debug("使用key[" + key + "]未从缓存中取得数据，准备执行目标方法");
         }
-        Serializable data = (Serializable) jp.proceed();
+        Serializable raw = (Serializable) jp.proceed();
         long expires = config.expire();
-        cacheTemplate.put(key, data, expires);
         if (log.isDebugEnabled()) {
             log.debug("使用key[" + key + "]设置缓存，过期时间:" + expires);
         }
         String[] channels = config.channels();
-        for (String channel : channels) {
-            cacheTemplate.addKeysToChannels(channel, key);
-            if (log.isDebugEnabled()) {
-                log.debug("建立频道[" + channel + "]与key[" + key + "]的关联");
-            }
-        }
-        return data;
+        cacheTemplate.putChannelAndCache(key, channels, raw, expires);
+        return raw;
     }
 
     /**
@@ -149,14 +145,14 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
         String[] channels = config.channels();
         String execOrder = config.execOrder();
         if (StringUtils.equals(execOrder, "before")) {
-            flushChannelKeysAndCache(channels);
+            this.flushChannelKeysAndCache(channels);
             if (log.isDebugEnabled()) {
                 log.debug("在目标方法执行前 清理频道数据：[" + JSONUtils.objectToString(channels) + "]");
             }
         }
         Object data = jp.proceed();
         if (StringUtils.equals(execOrder, "after")) {
-            flushChannelKeysAndCache(channels);
+            this.flushChannelKeysAndCache(channels);
             if (log.isDebugEnabled()) {
                 log.debug("在目标方法执行后 清理频道数据：[" + JSONUtils.objectToString(channels) + "]");
             }
@@ -174,11 +170,7 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
             return;
         }
         for (String channel : channels) {
-            Set<String> keySet = cacheTemplate.keysOfChannel(channel);
-            if(keySet.isEmpty()==false) {
-                cacheTemplate.delete(keySet);
-                cacheTemplate.deleteChannel(channel);
-            }
+            cacheTemplate.clearChannelAndCache(channel);
         }
     }
 
@@ -207,7 +199,7 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
                 if (log.isDebugEnabled()) {
                     log.debug(logMethodString + " , " + logParamsString + " , 生成key:" + key);
                 }
-            } else if (keyGenerator==KeyGenerator.Signature) {
+            } else if (keyGenerator == KeyGenerator.Signature) {
                 key = CacheKeyGenerator.generateMD5Key(clazz, method, params);
                 if (log.isDebugEnabled()) {
                     log.debug(logMethodString + " , " + logParamsString + " , 生成key:" + key);

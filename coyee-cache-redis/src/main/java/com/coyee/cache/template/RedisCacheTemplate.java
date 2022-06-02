@@ -1,8 +1,11 @@
 package com.coyee.cache.template;
 
+import com.coyee.cache.bean.Data;
 import com.coyee.cache.exception.CacheException;
 import com.coyee.cache.store.ICacheTemplate;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import javax.annotation.PostConstruct;
@@ -10,9 +13,8 @@ import javax.annotation.Resource;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
  * @version：1.0
  */
 public class RedisCacheTemplate implements ICacheTemplate {
+    private static Log log = LogFactory.getLog(RedisCacheTemplate.class);
     @Resource
     private RedisTemplate<String, Serializable> redisTemplate;
     /**
@@ -92,11 +95,6 @@ public class RedisCacheTemplate implements ICacheTemplate {
         }
     }
 
-    @Override
-    public void put(String key, Serializable value, long expires) {
-        String storeKey = this.createKey(key);
-        redisTemplate.opsForValue().set(storeKey, value);
-    }
 
     @Override
     public Serializable get(String key) {
@@ -105,33 +103,41 @@ public class RedisCacheTemplate implements ICacheTemplate {
     }
 
     @Override
-    public Set<String> keysOfChannel(String channel) {
+    public void clearChannelAndCache(String channel) {
+        String linkKey = this.createLinkKey(channel);
+        Set<Serializable> linkChannels = redisTemplate.opsForSet().members(linkKey);
+        for (Serializable linkChannel : linkChannels) {
+            clearLinkChannelAndCache((String) linkChannel);
+        }
+        this.clearLinkChannelAndCache(channel);
+    }
+
+    /**
+     * 清除一个栏目的缓存和关联关系
+     *
+     * @param channel
+     */
+    private void clearLinkChannelAndCache(String channel) {
         String channelKey = this.createChannelKey(channel);
         Set<Serializable> keys = redisTemplate.opsForSet().members(channelKey);
-        if (keys == null) {
-            return Collections.emptySet();
+        Set<String> keySet = keys.stream().map((key) -> this.createKey((String)key)).collect(Collectors.toSet());
+        this.deleteByKeys(keySet);//删除栏目相关的数据
+        this.deleteByKey(channelKey);//删除栏目
+        String linkKey = this.createLinkKey(channel);
+        this.deleteByKey(linkKey);//删除栏目关联
+    }
+
+    @Override
+    public void putChannelAndCache(String key, String[] channels, Serializable raw, long expires) {
+        String storeKey = this.createKey(key);
+        redisTemplate.opsForValue().set(storeKey, new Data(raw), expires, TimeUnit.MILLISECONDS);//保存实际缓存数据
+        for (String channel : channels) {
+            String linkKey = this.createLinkKey(channel);
+            redisTemplate.opsForSet().add(linkKey, channels);//建立栏目与其它栏目的关联关系
+            String channelKey = this.createChannelKey(channel);
+            redisTemplate.opsForSet().add(channelKey, key);//建立栏目与缓存数据的关系，此处保留原始的key,不加前缀
         }
-        return keys.stream().map((key) -> (String) key).collect(Collectors.toSet());
     }
-
-    @Override
-    public void addKeysToChannels(String channel, String key) {
-        String channelKey = this.createChannelKey(channel);
-        redisTemplate.opsForSet().add(channelKey, key);//此处保留原始的key,不加前缀
-    }
-
-    @Override
-    public void deleteChannel(String channel) {
-        String channelKey = this.createChannelKey(channel);
-        this.deleteByKey(channelKey);
-    }
-
-    @Override
-    public void delete(Collection<String> keys) {
-        List<String> storeKeys = this.createKeys(keys);
-        this.deleteByKeys(storeKeys);
-    }
-
 
     /**
      * 创建存储的位置KEY
@@ -145,26 +151,23 @@ public class RedisCacheTemplate implements ICacheTemplate {
     }
 
     /**
-     * 创建存储的位置KEY
+     * 创建栏目存储的位置KEY
      *
-     * @param keys
+     * @param channel
      * @return
      */
-    private List<String> createKeys(Collection<String> keys) {
-        if (keys == null) {
-            return Collections.emptyList();
-        }
-        return keys.stream().map(this::createKey).collect(Collectors.toList());
+    private String createChannelKey(String channel) {
+        return namespace + ":channel:" + channel;
     }
 
     /**
-     * 创建栏目存储的位置KEY
+     * 创建关联关系存储键
      *
-     * @param channelKey
+     * @param channel
      * @return
      */
-    private String createChannelKey(String channelKey) {
-        return namespace + ":channel:" + channelKey;
+    private String createLinkKey(String channel) {
+        return namespace + ":links:" + channel;
     }
 
     public String getNamespace() {

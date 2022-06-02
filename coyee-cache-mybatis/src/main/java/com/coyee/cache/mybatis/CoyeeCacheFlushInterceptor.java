@@ -96,6 +96,9 @@ public class CoyeeCacheFlushInterceptor implements Interceptor {
         if(table!=null){
             String tableName=StringUtils.lowerCase(table.getName());
             if(tables.contains(tableName)) {
+                if(log.isDebugEnabled()){
+                    log.debug("准备刷新["+tableName+"]相关的缓存");
+                }
                 coyeeCacheSupport.flushChannelKeysAndCache(new String[]{tableName});
             }
         }

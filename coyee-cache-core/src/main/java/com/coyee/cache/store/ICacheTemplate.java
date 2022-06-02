@@ -1,5 +1,7 @@
 package com.coyee.cache.store;
 
+import com.coyee.cache.annotation.Cache;
+
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Set;
@@ -13,14 +15,6 @@ import java.util.Set;
  */
 public interface ICacheTemplate {
     /**
-     * 存储
-     * @param key
-     * @param value
-     * @param expires
-     */
-    void put(String key, Serializable value,long expires);
-
-    /**
      * 获取缓存数据
      * @param key
      * @return
@@ -28,29 +22,18 @@ public interface ICacheTemplate {
     Serializable get(String key);
 
     /**
-     * 获取频道关联的缓存KEY
+     * 删除栏目缓存数据和相关关联数据
      * @param channel
-     * @return
      */
-    Set<String> keysOfChannel(String channel);
+    void clearChannelAndCache(String channel);
 
     /**
-     * 将key保存到相关的频道
+     * 保存数据到缓存并建立关联
      * @param key
-     * @param channel
+     * @param channels
+     * @param raw
+     * @param expires
      */
-    void addKeysToChannels(String channel,String key);
-
-    /**
-     * 删除缓存
-     * @param channel
-     */
-    void deleteChannel(String channel);
-
-    /**
-     * 批量删除缓存
-     * @param keys
-     */
-    void delete(Collection<String> keys);
+    void putChannelAndCache(String key, String[] channels, Serializable raw,long expires);
 
 }
