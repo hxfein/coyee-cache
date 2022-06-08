@@ -15,6 +15,9 @@ public class Data implements Serializable {
      * 原始数据
      */
     private Serializable rawData;
+
+    public Data(){}
+
     public Data(Serializable rawData){
         this.rawData=rawData;
     }
