@@ -18,11 +18,10 @@ public class Test {
     static AtomicInteger count = new AtomicInteger(0);
 
     public static void main(String[] args) {
-        final String[] methods = {"getUserAndRoleList", "getUserAndRoleList", "getUserAndRoleList", "getUserAndRoleList"};
         ExecutorService executorService=Executors.newFixedThreadPool(1000);
         for(int i=0;i<100000;i++) {
             executorService.execute(new GetThread());
-            if(i%200==0) {
+            if(i%2000==0) {
                 executorService.execute(new UpdateThread());
             }
             sleep(100);

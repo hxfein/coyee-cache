@@ -158,6 +158,7 @@ public class RedisCacheTemplate implements ICacheTemplate {
                         bean.keySet = keySet;
                         channelBlocks.add(bean);
                     }
+                    //开启事务，清除相关缓存数据
                     redisTemplate.multi();
                     for (ChannelBlock channelBlock : channelBlocks) {
                         String channelKey = channelBlock.channelKey;

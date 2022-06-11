@@ -14,7 +14,7 @@ import java.util.Map;
  */
 public interface TestService {
     List<Map<String,Object>> getUserAndRoleList(String orderBy,String keyword,int limit);
-    List<Map<String,Object>> getRoleList();
+    List<Map<String,Object>> getRoleList(String keyword);
     void updateUser(Map<String, Object> bean);
     void updateRole(Map<String, Object> bean);
 }

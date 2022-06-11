@@ -37,4 +37,25 @@ public @interface Cache {
      * @return
      */
     KeyGenerator keyGenerator() default KeyGenerator.Signature;
+
+    /**
+     * 进入方法时回调的方法名,方法签名参考:
+     * void beforeTest(Object[] params);
+     * 其中:
+     * params与拦截方法的参数列表一致
+     * 便于用户在取得缓存数据前更新动态数据，例如获取商品数据之前可以更新商品的浏览量
+     * @return
+     */
+    String beforeExec() default "";
+
+    /**
+     * 离开方法时回调的方法名，方法签名参考:
+     * Serializable afterTest(Object[] params,Serializable result)
+     * 其中:
+     * params与拦截方法的参数列表一致
+     * result为最终返回的数据
+     * 用户可在此回调中修改缓存数据动态的部分，例如从缓存中取得商品数据后要把商品的浏览量修改为实时数据
+     * @return
+     */
+    String afterExec() default "";
 }

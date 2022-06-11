@@ -12,6 +12,8 @@ import test.service.TestService;
 
 import javax.annotation.Resource;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author hxfein
@@ -48,11 +50,17 @@ public class TestController {
         return "success";
     }
 
+
+    @RequestMapping("/getRoleList")
+    @ResponseBody
+    public List<Map<String,Object>> getRoleList(String keyword){
+        return testService.getRoleList(keyword);
+    }
+
     @RequestMapping("/getUserAndRoleList")
     @ResponseBody
-    public String getUserAndRoleList(String keyword){
-        testService.getUserAndRoleList("",keyword,10);
-        return "success";
+    public List<Map<String,Object>> getUserAndRoleList(String keyword){
+        return testService.getUserAndRoleList("",keyword,10);
     }
 
 

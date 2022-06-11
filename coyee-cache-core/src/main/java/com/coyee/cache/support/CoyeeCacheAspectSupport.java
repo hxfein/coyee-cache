@@ -70,6 +70,9 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
     public Object cacheAnnotationAround(ProceedingJoinPoint jp) throws Throwable {
         MethodInvocationProceedingJoinPoint methodJp = (MethodInvocationProceedingJoinPoint) jp;
         Cache config = this.getMethodAnnotation(methodJp, Cache.class);
+        //执行前置方法
+        this.executeBeforeHandler(methodJp, config);
+        //执行前缀方法结束
         String key = createKey(methodJp, config);
         Object data = cacheTemplate.get(key);
         if (data != null) {
@@ -77,13 +80,16 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
                 if (log.isDebugEnabled()) {
                     log.debug("使用key[" + key + "]从缓存中取得数据，直接返回");
                 }
-                return ((Data) data).getRawData();
+                Serializable result = ((Data) data).getRawData();
+                result = this.executeAfterHandler(methodJp, config, result);
+                return result;
             }
         }
         if (log.isDebugEnabled()) {
             log.debug("使用key[" + key + "]未从缓存中取得数据，准备执行目标方法");
         }
         Serializable raw = (Serializable) jp.proceed();
+        raw = this.executeAfterHandler(methodJp, config, raw);
         long expires = config.expire();
         if (log.isDebugEnabled()) {
             log.debug("使用key[" + key + "]设置缓存，过期时间:" + expires);
@@ -229,6 +235,63 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
         String methodName = method.getName();
         Method targetMethod = targetClass.getMethod(methodName, parameterTypes);
         return targetMethod.getAnnotation(annotationClazz);
+    }
+
+    /**
+     * 执行前置方法
+     *
+     * @param methodJp
+     * @param config
+     * @throws NoSuchMethodException
+     */
+    private void executeBeforeHandler(MethodInvocationProceedingJoinPoint methodJp, Cache config) throws NoSuchMethodException {
+        MethodSignature methodSignature = (MethodSignature) methodJp.getSignature();
+        Object target = methodJp.getTarget();
+        Class<?> targetClass = target.getClass();
+        Method method = methodSignature.getMethod();
+        String beforeExec = config.beforeExec();
+        if (StringUtils.isBlank(beforeExec)) {
+            return;
+        }
+        Method beforeMethod = targetClass.getMethod(beforeExec, Object[].class);
+        if (beforeMethod == null) {
+            throw new CacheException("方法[" + targetClass.getName() + "." + method + "]配置了缓存前缀执行方法，但没有找到该方法!");
+        }
+        Object[] args = methodJp.getArgs();
+        try {
+            beforeMethod.invoke(target, new Object[]{args});
+        } catch (Exception er) {
+            throw new CacheException("执行前缀方法[" + targetClass.getName() + "." + method + "]出错", er);
+        }
+    }
+
+    /**
+     * 执行后置方法
+     *
+     * @param methodJp
+     * @param config
+     * @throws NoSuchMethodException
+     */
+    private Serializable executeAfterHandler(MethodInvocationProceedingJoinPoint methodJp, Cache config, Serializable result) throws NoSuchMethodException {
+        MethodSignature methodSignature = (MethodSignature) methodJp.getSignature();
+        Object target = methodJp.getTarget();
+        Class<?> targetClass = target.getClass();
+        Method method = methodSignature.getMethod();
+        String afterExec = config.afterExec();
+        if (StringUtils.isBlank(afterExec)) {
+            return result;
+        }
+        Method afterMethod = targetClass.getMethod(afterExec, Object[].class, Serializable.class);
+        if (afterMethod == null) {
+            throw new CacheException("方法[" + targetClass.getName() + "." + method + "]配置了缓存后置执行方法，但没有找到该方法!");
+        }
+        Object[] args = methodJp.getArgs();
+        try {
+            result = (Serializable) afterMethod.invoke(target, new Object[]{args, result});
+            return result;
+        } catch (Exception er) {
+            throw new CacheException("执行后置方法[" + targetClass.getName() + "." + method + "]出错", er);
+        }
     }
 
 }

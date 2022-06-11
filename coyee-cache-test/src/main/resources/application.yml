@@ -1,3 +1,4 @@
+
 # Spring配置
 spring:
   # redis配置
@@ -20,3 +21,5 @@ spring:
         max-wait: -1m
     password: 123456
     database: 11
+server:
+  port: 7777
