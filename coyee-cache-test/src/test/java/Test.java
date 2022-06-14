@@ -1,4 +1,5 @@
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.RandomStringUtils;
 
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -18,29 +19,30 @@ public class Test {
     static AtomicInteger count = new AtomicInteger(0);
 
     public static void main(String[] args) {
-        ExecutorService executorService=Executors.newFixedThreadPool(1000);
+        ExecutorService executorService=Executors.newFixedThreadPool(30);
         for(int i=0;i<100000;i++) {
             executorService.execute(new GetThread());
-            if(i%2000==0) {
+            if(i%200==0) {
                 executorService.execute(new UpdateThread());
             }
-            sleep(100);
+            sleep((long)(Math.random()*10000d));
         }
     }
 
     static class GetThread implements Runnable {
         public void run() {
-            String url=String.format("http://localhost:8080/getUserAndRoleList?keyword="+Math.random());
+            String urlStr="http://localhost:7777/getUserAndRoleList?keyword="+ RandomStringUtils.random(5,"abcdefghijjklsas");
+            String url=String.format(urlStr);
             long start=System.currentTimeMillis();
             String result=catchUrl(url);
             long end=System.currentTimeMillis();
-//            System.out.println("****获取数据结果:"+result+"，用时:"+(end-start));
+            System.out.println("****获取数据结果:"+result+"，用时:"+(end-start)+"   "+urlStr);
         }
     }
 
     static class UpdateThread implements Runnable {
         public void run() {
-            String url=String.format("http://localhost:8080/updateRole?keyword="+Math.random());
+            String url=String.format("http://localhost:7777/updateRole?keyword="+Math.random());
             long start=System.currentTimeMillis();
             String result=catchUrl(url);
             long end=System.currentTimeMillis();

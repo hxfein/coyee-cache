@@ -11,6 +11,8 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -60,6 +62,10 @@ public class RedisCacheTemplate implements ICacheTemplate {
      * 加锁失败重试时间间隔(毫秒)
      */
     private long lockRetrySleep = 50L;
+    /**
+     * 锁过期时间
+     */
+    private long lockExpireMillis = this.lockRetrySleep * this.lockRetryTimes;
 
     /**
      * 批量删除的方法
@@ -122,99 +128,95 @@ public class RedisCacheTemplate implements ICacheTemplate {
 
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Serializable get(String key) {
         String storeKey = this.createKey(key);
         return redisTemplate.opsForValue().get(storeKey);
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void clearChannelAndCache(String channel) {
         RedisCacheTemplate that = this;
-        redisTemplate.execute(new SessionCallback<Object>() {
+        List<ChannelBlock> channelBlocks = getChannelBlocks(channel);
+        this.doInLock(new DoInLockHandler() {
             @Override
-            public <K, V> Object execute(RedisOperations<K, V> redisOperations) throws DataAccessException {
-                boolean lock = that.lock(channel);
-                if (lock == false) {
-                    log.warn("未能取得操作栏目[" + channel + "]的锁，不能清空缓存");
-                    that.unlock(channel);
-                    if (strict == true) {
-                        throw new CacheException("未能取得操作栏目[" + channel + "]的锁，不能清空缓存");
-                    }
-                    return null;
-                }
-
+            public void onLockOk(RedisOperations redisOperations) {
                 try {
-                    //先把数据取出来再开启事务清除,否则在事务中不能取得缓存的数据
-                    List<ChannelBlock> channelBlocks = new ArrayList<>();
-                    String linkKey = that.createLinkKey(channel);
-                    Set<Serializable> linkChannels = redisTemplate.opsForSet().members(linkKey);
-                    for (Serializable linkChannel : linkChannels) {
-                        String channelKey = that.createChannelKey((String) linkChannel);
-                        String linkChannelKey = that.createLinkKey((String) linkChannel);
-                        Set<Serializable> keySet = redisTemplate.opsForSet().members(channelKey);
-                        ChannelBlock bean = new ChannelBlock();
-                        bean.channelKey = channelKey;
-                        bean.linkKey = linkChannelKey;
-                        bean.keySet = keySet;
-                        channelBlocks.add(bean);
-                    }
-                    //开启事务，清除相关缓存数据
-                    redisTemplate.multi();
                     for (ChannelBlock channelBlock : channelBlocks) {
                         String channelKey = channelBlock.channelKey;
                         String channelLinkKey = channelBlock.linkKey;
-                        Set<Serializable> keySet = channelBlock.keySet.stream().map(key->that.createKey((String)key)).collect(Collectors.toSet());
+                        Set<Serializable> keySet = channelBlock.keySet.stream().map(key -> that.createKey((String) key)).collect(Collectors.toSet());
                         that.deleteByKeys(keySet);//删除栏目相关的数据
                         that.deleteByKey(channelKey);//删除栏目
                         that.deleteByKey(channelLinkKey);//删除栏目关联
                     }
-                    redisTemplate.exec();
                 } catch (Exception er) {
                     log.warn("清除栏目缓存出错,回滚事务", er);
                     if (strict == true) {
-                        throw new CacheException("清除栏目缓存出错，回滚事务", er);
+                        throw new CacheException("清除栏目缓存出错,严格模式下为避免脏数据产生,建议回滚事务", er);
                     }
-                    redisTemplate.discard();
-                } finally {
-                    that.unlock(channel);
                 }
-                return null;
             }
-        });
+
+            @Override
+            public void onLockFailure() {
+                if (strict == true) {
+                    throw new CacheException("未能取得操作栏目[" + channel + "]的锁，不能清空缓存");
+                }
+            }
+        }, channel);
+    }
+
+    /**
+     * 获取一个栏目下的数据相关数据
+     *
+     * @param channel
+     * @return
+     */
+    private List<ChannelBlock> getChannelBlocks(String channel) {
+        List<ChannelBlock> channelBlocks = new ArrayList<>();
+        String linkKey = this.createLinkKey(channel);
+        Set<Serializable> linkChannels = redisTemplate.opsForSet().members(linkKey);
+        for (Serializable linkChannel : linkChannels) {
+            String channelKey = this.createChannelKey((String) linkChannel);
+            String linkChannelKey = this.createLinkKey((String) linkChannel);
+            Set<Serializable> keySet = redisTemplate.opsForSet().members(channelKey);
+            ChannelBlock bean = new ChannelBlock();
+            bean.channelKey = channelKey;
+            bean.linkKey = linkChannelKey;
+            bean.keySet = keySet;
+            channelBlocks.add(bean);
+        }
+        return channelBlocks;
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void putChannelAndCache(String key, String[] channels, Serializable raw, long expires) {
         RedisCacheTemplate that = this;
-        redisTemplate.execute(new SessionCallback<Object>() {
+        this.doInLock(new DoInLockHandler() {
             @Override
-            public <K, V> Object execute(RedisOperations<K, V> redisOperations) throws DataAccessException {
-                boolean lock = that.lock(channels);
-                if (lock == false) {
-                    log.warn("未能取得操作栏目[" + Arrays.toString(channels) + "]的锁，不能存储数据");
-                    that.unlock(channels);
-                    return null;
-                }
+            public void onLockOk(RedisOperations redisOperations) {
                 try {
-                    redisTemplate.multi();
                     String storeKey = that.createKey(key);
                     for (String channel : channels) {
                         String linkKey = that.createLinkKey(channel);
-                        redisTemplate.opsForSet().add(linkKey, channels);//建立栏目与其它栏目的关联关系
+                        redisOperations.opsForSet().add(linkKey, channels);//建立栏目与其它栏目的关联关系
                         String channelKey = that.createChannelKey(channel);
-                        redisTemplate.opsForSet().add(channelKey, key);//建立栏目与缓存数据的关系，此处保留原始的key,不加前缀
+                        redisOperations.opsForSet().add(channelKey, key);//建立栏目与缓存数据的关系，此处保留原始的key,不加前缀
                     }
-                    redisTemplate.opsForValue().set(storeKey, new Data(raw), expires, TimeUnit.MILLISECONDS);//保存实际缓存数据
-                    redisTemplate.exec();
+                    redisOperations.opsForValue().set(storeKey, new Data(raw), expires, TimeUnit.MILLISECONDS);//保存实际缓存数据
                 } catch (Exception er) {
                     log.error("存储栏目数据出错，回滚事务", er);
-                    redisTemplate.discard();
-                } finally {
-                    that.unlock(channels);
                 }
-                return null;
             }
-        });
+
+            @Override
+            public void onLockFailure() {
+                log.warn("未能取得操作栏目[" + Arrays.toString(channels) + "]的锁，不能存储数据");
+            }
+        }, channels);
     }
 
     /**
@@ -223,31 +225,61 @@ public class RedisCacheTemplate implements ICacheTemplate {
      * @param channels
      * @return
      */
-    public boolean lock(String... channels) {
-        return this.lock(this.lockRetryTimes, channels);
+    public void doInLock(DoInLockHandler doInLockHandler, String... channels) {
+        this.doInLock(doInLockHandler, this.lockRetryTimes, channels);
     }
 
     /**
      * 获取锁
+     *
      * @param retryTimes 重新尝试次数
      * @param channels
      * @return
      */
-    private boolean lock(int retryTimes, String... channels) {
+    private void doInLock(DoInLockHandler doInLockHandler, int retryTimes, String... channels) {
         String threadSignature = this.createThreadSignature();
         Map<String, Serializable> params = new HashMap<>();
         for (String channel : channels) {
             String lockKey = this.createLockKey(channel);
             params.put(lockKey, threadSignature);
         }
-        boolean result = redisTemplate.opsForValue().multiSetIfAbsent(params);
-        if (result == false && retryTimes > 0) {
-            this.sleep(this.lockRetrySleep);
-            retryTimes = retryTimes - 1;
-            log.debug("未能取得锁[" + Arrays.toString(channels) + "],进行第" + (this.lockRetryTimes - retryTimes) + "次尝试");
-            return lock(retryTimes, channels);
+        Boolean result = redisTemplate.opsForValue().multiSetIfAbsent(params);
+        if (result == null) {
+            throw new CacheException("redis未能响应加锁结果,请检查此lock()方法是否在redis事务代码中被调用!");
         }
-        return result;
+        //成功取得锁
+        if (result == true) {
+            //设置锁的过期时间
+            params.keySet().forEach(lockKey -> {
+                redisTemplate.expire(lockKey, this.lockExpireMillis, TimeUnit.MILLISECONDS);
+            });
+            redisTemplate.execute(new SessionCallback<Object>() {
+                @Override
+                public <K, V> Object execute(RedisOperations<K, V> redisOperations) throws DataAccessException {
+                    try {
+                        redisOperations.multi();
+                        doInLockHandler.onLockOk(redisOperations);
+                        redisOperations.exec();
+                    } catch (CacheException er) {
+                        redisOperations.discard();
+                        throw er;
+                    }
+                    return null;
+                }
+            });
+        } else {
+            retryTimes = retryTimes - 1;
+            //再次尝试取得锁
+            if (retryTimes > 0) {
+                this.sleep(this.lockRetrySleep);
+                log.warn("未能取得锁[" + Arrays.toString(channels) + "],进行第" + (this.lockRetryTimes - retryTimes) + "次尝试");
+                doInLock(doInLockHandler, retryTimes, channels);
+            } else {
+                //多次尝试仍未取得锁
+                doInLockHandler.onLockFailure();
+            }
+        }
+        this.unlock(channels);
     }
 
     /**
@@ -360,6 +392,38 @@ public class RedisCacheTemplate implements ICacheTemplate {
         this.strict = strict;
     }
 
+    public RedisTemplate<Serializable, Serializable> getRedisTemplate() {
+        return redisTemplate;
+    }
+
+    public void setRedisTemplate(RedisTemplate<Serializable, Serializable> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
+
+    public int getLockRetryTimes() {
+        return lockRetryTimes;
+    }
+
+    public void setLockRetryTimes(int lockRetryTimes) {
+        this.lockRetryTimes = lockRetryTimes;
+    }
+
+    public long getLockRetrySleep() {
+        return lockRetrySleep;
+    }
+
+    public void setLockRetrySleep(long lockRetrySleep) {
+        this.lockRetrySleep = lockRetrySleep;
+    }
+
+    public long getLockExpireMillis() {
+        return lockExpireMillis;
+    }
+
+    public void setLockExpireMillis(long lockExpireMillis) {
+        this.lockExpireMillis = lockExpireMillis;
+    }
+
     /**
      * 定义栏目关联的关系
      */
@@ -367,5 +431,21 @@ public class RedisCacheTemplate implements ICacheTemplate {
         String channelKey;
         String linkKey;
         Set<Serializable> keySet;
+    }
+
+    interface DoInLockHandler {
+        /**
+         * 加锁成功回调
+         *
+         * @param redisOperations
+         */
+        void onLockOk(RedisOperations redisOperations);
+
+        /**
+         * 加锁失败回调
+         */
+        default void onLockFailure() {
+
+        }
     }
 }

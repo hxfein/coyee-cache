@@ -22,7 +22,7 @@ import java.util.Map;
 @Service
 public class TestServiceImpl implements TestService{
     @Override
-    @Cache(channels = {"user","role","a","b","c","d","e","f","g","h","i","j","k","m"},key="''.concat(#orderBy).concat(#keyword).concat(#limit)")
+    @Cache(channels = {"user","role"},key="''.concat(#orderBy).concat(#keyword).concat(#limit)")
     public List<Map<String, Object>> getUserAndRoleList(String orderBy,String keyword,int limit) {
         List<Map<String,Object>> list=new ArrayList<>();
         Map<String,Object> bean=new HashMap<>();
@@ -59,13 +59,13 @@ public class TestServiceImpl implements TestService{
 
 
     @Override
-    @Flush(channels={"user","role","a","b","c","d","e","f","g","h","i","j","k","m"})
+    @Flush(channels={"user"})
     public void updateUser(Map<String, Object> bean) {
         System.out.println("更新用户数据:"+System.currentTimeMillis());
     }
 
     @Override
-    @Flush(channels={"user","role","a","b","c","d","e","f","g","h","i","j","k","m"})
+    @Flush(channels={"role"})
     public void updateRole(Map<String, Object> bean) {
         System.out.println("更新角色数据:"+System.currentTimeMillis());
     }
