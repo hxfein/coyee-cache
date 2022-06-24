@@ -2,7 +2,6 @@ package com.coyee.cache.template;
 
 import com.coyee.cache.bean.Data;
 import com.coyee.cache.exception.CacheException;
-import com.coyee.cache.store.ICacheTemplate;
 import com.coyee.cache.utils.NetworkUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -14,10 +13,7 @@ import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import java.io.Serializable;
-import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -37,23 +33,9 @@ import java.util.stream.Collectors;
  * @date 2022/4/25 16:04
  * @version：1.0
  */
-public class RedisCacheTemplate implements ICacheTemplate {
-    private static Log log = LogFactory.getLog(RedisCacheTemplate.class);
-    @Resource
-    private RedisTemplate<Serializable, Serializable> redisTemplate;
-    /**
-     * 存储的目录名
-     */
-    private static final String DEFAULT_NAMESPACE = "coyee_cache";
-    private String namespace = DEFAULT_NAMESPACE;
-    /**
-     * 是否启用兼容模式
-     */
-    private boolean compatibilityMode = false;
-    /**
-     * 是否启用严格的一致性保护
-     */
-    private boolean strict = true;
+public class RedisWithLockCacheTemplate extends AbstractRedisCacheTemplate {
+    private static Log log = LogFactory.getLog(RedisWithLockCacheTemplate.class);
+
     /**
      * 加锁重试次数
      */
@@ -67,64 +49,8 @@ public class RedisCacheTemplate implements ICacheTemplate {
      */
     private long lockExpireMillis = this.lockRetrySleep * this.lockRetryTimes;
 
-    /**
-     * 批量删除的方法
-     */
-    private Method deleteBatchMethod = null;
-    /**
-     * 删除单个的方法
-     */
-    private Method deleteSingleMethod = null;
 
     private static String localIp = NetworkUtils.getLocalHostLANIP();
-
-    @PostConstruct
-    private void init() {
-        try {
-            Class<?> clazz = redisTemplate.getClass();
-            deleteBatchMethod = clazz.getMethod("delete", Collection.class);
-            deleteSingleMethod = clazz.getMethod("delete", Object.class);
-            redisTemplate.setEnableTransactionSupport(true);//启用事务
-        } catch (Exception e) {
-            throw new CacheException("初始化redisTemplate出错", e);
-        }
-    }
-
-    /**
-     * 删除key
-     * 通过反射方式兼容低版本redis客户端与高版本删除方法的差异
-     *
-     * @param key
-     */
-    private void deleteByKey(String key) {
-        if (compatibilityMode == true) {
-            try {
-                deleteSingleMethod.invoke(redisTemplate, key);
-            } catch (Exception er) {
-                throw new CacheException("通过兼容模式删除删除失败", er);
-            }
-        } else {
-            redisTemplate.delete(key);
-        }
-    }
-
-    /**
-     * 删除keys
-     * 通过反射方式兼容低版本redis客户端与高版本删除方法的差异
-     *
-     * @param keys
-     */
-    private void deleteByKeys(Collection<Serializable> keys) {
-        if (compatibilityMode == true) {
-            try {
-                deleteBatchMethod.invoke(redisTemplate, keys);
-            } catch (Exception er) {
-                throw new CacheException("通过兼容模式删除删除失败", er);
-            }
-        } else {
-            redisTemplate.delete(keys);
-        }
-    }
 
 
     @Override
@@ -137,7 +63,7 @@ public class RedisCacheTemplate implements ICacheTemplate {
     @Override
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void clearChannelAndCache(String channel) {
-        RedisCacheTemplate that = this;
+        RedisWithLockCacheTemplate that = this;
         List<ChannelBlock> channelBlocks = getChannelBlocks(channel);
         this.doInLock(new DoInLockHandler() {
             @Override
@@ -194,7 +120,7 @@ public class RedisCacheTemplate implements ICacheTemplate {
     @Override
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void putChannelAndCache(String key, String[] channels, Serializable raw, long expires) {
-        RedisCacheTemplate that = this;
+        RedisWithLockCacheTemplate that = this;
         this.doInLock(new DoInLockHandler() {
             @Override
             public void onLockOk(RedisOperations redisOperations) {
@@ -314,46 +240,6 @@ public class RedisCacheTemplate implements ICacheTemplate {
         }
     }
 
-    /**
-     * 创建存储的位置KEY
-     *
-     * @param key
-     * @return
-     */
-    private String createKey(String key) {
-        key = StringUtils.replaceChars(key, ':', '=');
-        return namespace + ":data:" + key;
-    }
-
-    /**
-     * 创建栏目存储的位置KEY
-     *
-     * @param channel
-     * @return
-     */
-    private String createChannelKey(String channel) {
-        return namespace + ":channel:" + channel;
-    }
-
-    /**
-     * 创建关联关系存储键
-     *
-     * @param channel
-     * @return
-     */
-    private String createLinkKey(String channel) {
-        return namespace + ":links:" + channel;
-    }
-
-    /**
-     * 创建锁存储键
-     *
-     * @param channel
-     * @return
-     */
-    private String createLockKey(String channel) {
-        return namespace + ":locks:" + channel;
-    }
 
     /**
      * 创建锁的唯一标识符
@@ -368,29 +254,7 @@ public class RedisCacheTemplate implements ICacheTemplate {
         return value;
     }
 
-    public String getNamespace() {
-        return namespace;
-    }
 
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
-    }
-
-    public boolean isCompatibilityMode() {
-        return compatibilityMode;
-    }
-
-    public void setCompatibilityMode(boolean compatibilityMode) {
-        this.compatibilityMode = compatibilityMode;
-    }
-
-    public boolean isStrict() {
-        return strict;
-    }
-
-    public void setStrict(boolean strict) {
-        this.strict = strict;
-    }
 
     public RedisTemplate<Serializable, Serializable> getRedisTemplate() {
         return redisTemplate;
@@ -422,15 +286,6 @@ public class RedisCacheTemplate implements ICacheTemplate {
 
     public void setLockExpireMillis(long lockExpireMillis) {
         this.lockExpireMillis = lockExpireMillis;
-    }
-
-    /**
-     * 定义栏目关联的关系
-     */
-    class ChannelBlock {
-        String channelKey;
-        String linkKey;
-        Set<Serializable> keySet;
     }
 
     interface DoInLockHandler {

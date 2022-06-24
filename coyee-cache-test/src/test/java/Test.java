@@ -25,7 +25,7 @@ public class Test {
             if(i%200==0) {
                 executorService.execute(new UpdateThread());
             }
-            sleep((long)(Math.random()*10000d));
+            sleep(100);
         }
     }
 

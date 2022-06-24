@@ -20,7 +20,9 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.aop.aspectj.MethodInvocationProceedingJoinPoint;
 import org.springframework.context.expression.AnnotatedElementKey;
 import org.springframework.expression.EvaluationContext;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
@@ -35,6 +37,16 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
     private ExpressionEvaluator evaluator = new ExpressionEvaluator();
     @Resource
     private ICacheTemplate cacheTemplate;
+    /**
+     * 是否启用环境管理
+     */
+    private boolean disabled = false;
+
+    @PostConstruct
+    private void init() {
+        String cacheDisabled = System.getenv("COYEE_CACHE_DISABLED");
+        this.disabled = StringUtils.equalsIgnoreCase(cacheDisabled, "true");
+    }
 
     /**
      * 判断是否为调试模式，若为测试模式，则key不会被md5存储
@@ -69,11 +81,15 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
     @Around("cacheAnnotationPointCut()")
     public Object cacheAnnotationAround(ProceedingJoinPoint jp) throws Throwable {
         MethodInvocationProceedingJoinPoint methodJp = (MethodInvocationProceedingJoinPoint) jp;
+        if (this.disabled == true) {
+            return methodJp.proceed();
+        }
         Cache config = this.getMethodAnnotation(methodJp, Cache.class);
         //执行前置方法
         this.executeBeforeHandler(methodJp, config);
         //执行前缀方法结束
         String key = createKey(methodJp, config);
+        log.debug("处理["+methodJp.getSignature()+"]的获取缓存请求,当前key为:"+key);
         Object data = cacheTemplate.get(key);
         if (data != null) {
             if (data instanceof Data) {
@@ -147,6 +163,10 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
     @Around("flushAnnotationPointCut()")
     public Object flushAnnotationAround(ProceedingJoinPoint jp) throws Throwable {
         MethodInvocationProceedingJoinPoint methodJp = (MethodInvocationProceedingJoinPoint) jp;
+        if (this.disabled == true) {
+            return methodJp.proceed();
+        }
+        log.debug("处理["+methodJp.getSignature()+"]的刷新缓存请求。。。");
         Flush config = this.getMethodAnnotation(methodJp, Flush.class);
         String[] channels = config.channels();
         String execOrder = config.execOrder();
@@ -197,19 +217,11 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
             Class clazz = target.getClass();
             Method method = methodSignature.getMethod();
             Object[] params = methodJp.getArgs();
-            String logMethodString = String.format("方法:%s@%s", clazz.getName(), method.getName());
             String paramsString = JSONUtils.objectToString(params);
-            String logParamsString = String.format("参数:%s", paramsString);
             if (isDebug()) {
                 key = CacheKeyGenerator.generateDebugKey(clazz, method, params);
-                if (log.isDebugEnabled()) {
-                    log.debug(logMethodString + " , " + logParamsString + " , 生成key:" + key);
-                }
             } else if (keyGenerator == KeyGenerator.Signature) {
                 key = CacheKeyGenerator.generateMD5Key(clazz, method, params);
-                if (log.isDebugEnabled()) {
-                    log.debug(logMethodString + " , " + logParamsString + " , 生成key:" + key);
-                }
             } else {
                 throw new CacheException("未找到key或keyGenerator");
             }
