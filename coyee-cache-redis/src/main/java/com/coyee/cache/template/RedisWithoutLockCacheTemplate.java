@@ -31,13 +31,6 @@ import java.util.stream.Collectors;
  * @className: RedisCacheTemplate
  * @description: putChannelAndCache方法用于将数据保存在redis中并建立缓存与栏目的关系。
  * clearChannelAndCache方法用于清除缓存和缓存相关的关系。
- * 为保证数据一致性，这两个方法均采用事务方式尽可能避免脏数据的产生。
- * <p>
- * 一般而言，putChannelAndCache方法是业务方法获取到数据以后才被调用，此时产生脏数据的可能性较小，
- * 只是会造成缓存没有生成的情况，因此即使在严格模式下存储出错仍然不影响业务代码的执行。
- * <p>
- * 而clearChannelAndCache一般是由务数据发生变更后才会被调用，此时如果缓存数据没有被清除，
- * 会导致业务数据与缓存数据不一致，进而造成业务错误，因此在严格模式下此种情况直接抛出异常由业务上决定是否回滚。
  * @date 2022/4/25 16:04
  * @version：1.0
  */

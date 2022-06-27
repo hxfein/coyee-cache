@@ -22,7 +22,9 @@ import org.apache.ibatis.session.RowBounds;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
 import java.util.*;
+
 /**
  * 拦截mybatis底层执行的SQL，刷新相应栏目的缓存
  * 遗留问题：存在刷新缓存后数据库事务发生回滚，导致缓存意外失效问题
@@ -69,6 +71,7 @@ public class CoyeeCacheFlushInterceptor implements Interceptor {
             });
         }
     }
+
     /**
      * 初始化拦截器
      *
@@ -79,13 +82,13 @@ public class CoyeeCacheFlushInterceptor implements Interceptor {
         this.coyeeCacheSupport = coyeeCacheSupport;
         if (channelAndTables != null) {
             channelAndTables.forEach((configString) -> {
-                String configArr[]=StringUtils.split(configString,":");
-                if(configArr.length!=2){
-                    throw new CacheException("配置:["+configString+"不符合配置规范!]");
+                String configArr[] = StringUtils.split(configString, ":");
+                if (configArr.length != 2) {
+                    throw new CacheException("配置:[" + configString + "不符合配置规范!]");
                 }
-                String channel=configArr[0];
-                String tableString=configArr[1];
-                String tables[]=StringUtils.split(tableString,",");
+                String channel = configArr[0];
+                String tableString = configArr[1];
+                String tables[] = StringUtils.split(tableString, ",");
                 Arrays.stream(tables).forEach((table) -> {
                     String tableName = StringUtils.lowerCase(table);
                     Set<String> channels = tableAndChannels.get(tableName);
@@ -114,13 +117,13 @@ public class CoyeeCacheFlushInterceptor implements Interceptor {
         String sql = boundSql.getSql();
         if (StringUtils.equalsIgnoreCase(commandName, "INSERT")) {
             Table table = this.getInsertTable(sql);
-            this.flushCacheOfTable(table);
+            this.flushCacheOfTable(invocation, table);
         } else if (StringUtils.equalsIgnoreCase(commandName, "UPDATE")) {
             Table table = this.getUpdateTable(sql);
-            this.flushCacheOfTable(table);
+            this.flushCacheOfTable(invocation, table);
         } else if (StringUtils.equalsIgnoreCase(commandName, "DELETE")) {
             Table table = this.getDeleteTable(sql);
-            this.flushCacheOfTable(table);
+            this.flushCacheOfTable(invocation, table);
         }
         return result;
     }
@@ -130,19 +133,56 @@ public class CoyeeCacheFlushInterceptor implements Interceptor {
      *
      * @param table
      */
-    private void flushCacheOfTable(Table table) {
-        if (table != null) {
-            String tableName = StringUtils.lowerCase(table.getName());
-            if (tableAndChannels.containsKey(tableName)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("准备刷新[" + tableName + "]相关的缓存");
-                }
-                Set<String> channels = tableAndChannels.get(tableName);
-                if (channels != null) {
-                    String[] channelArray = channels.stream().toArray(String[]::new);
+    private void flushCacheOfTable(Invocation invocation, Table table) {
+        if (table == null || invocation == null) {
+            return;
+        }
+        final Object[] args = invocation.getArgs();
+        MappedStatement ms = (MappedStatement) args[0];
+        String methodId = ms.getId();
+        String tableName = StringUtils.lowerCase(table.getName());
+        if (tableAndChannels.containsKey(tableName)) {
+            if (log.isDebugEnabled()) {
+                log.debug("准备刷新[" + tableName + "]相关的缓存");
+            }
+            Set<String> channels = tableAndChannels.get(tableName);
+            if (channels != null) {
+                String[] channelArray = channels.stream().toArray(String[]::new);
+                com.coyee.cache.annotation.Update update = this.getUpdateAnnotation(invocation);
+                if (update != null && update.cache() == false) {//不更新缓存
+                    log.info("mapper方法[" + methodId + "]标记了不更新缓存，忽略。。。");
+                } else {
                     coyeeCacheSupport.flushChannelKeysAndCache(channelArray);
                 }
             }
+        }
+    }
+
+    /**
+     * 获取mapper方法上的update注解,这里假设mapper中不存在重复的方法
+     *
+     * @param invocation
+     * @return
+     */
+    private com.coyee.cache.annotation.Update getUpdateAnnotation(Invocation invocation) {
+        final Object[] args = invocation.getArgs();
+        MappedStatement ms = (MappedStatement) args[0];
+        String methodId = ms.getId();
+        try {
+            String className = StringUtils.substringBeforeLast(methodId, ".");
+            String methodName = StringUtils.substringAfterLast(methodId, ".");
+            Class clazz = Class.forName(className);
+            Method[] methods = clazz.getMethods();
+            for (Method method : methods) {
+                String name = method.getName();
+                if (StringUtils.equals(name, methodName)) {
+                    com.coyee.cache.annotation.Update update = method.getDeclaredAnnotation(com.coyee.cache.annotation.Update.class);
+                    return update;
+                }
+            }
+            return null;
+        } catch (Exception er) {
+            throw new CacheException("未知的方法:" + methodId, er);
         }
     }
 
@@ -193,15 +233,6 @@ public class CoyeeCacheFlushInterceptor implements Interceptor {
 
     @Override
     public void setProperties(Properties properties) {
-
-    }
-
-    public static void main(String[] args) throws Throwable {
-        MethodHandles.Lookup lookup=MethodHandles.lookup();
-        MethodType type=MethodType.methodType(String.class, int.class, int.class);
-        MethodHandle mh=lookup.findVirtual(String.class,"substring",type);
-        String str=(String)mh.invokeExact("Hello World",1,3);
-        System.out.println(str);
 
     }
 
