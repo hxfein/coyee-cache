@@ -27,10 +27,10 @@ public @interface Cache {
     String[] channels() default "";
 
     /**
-     * 过期时间
+     * 过期时间(-1代表不设置)
      * @return
      */
-    int expire() default 5*60*1000;
+    int expire() default -1;
 
     /**
      * key生成器,默认通过方法签名生成

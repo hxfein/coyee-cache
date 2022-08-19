@@ -1,12 +1,12 @@
 package com.coyee.cache.support;
 
+import com.coyee.cache.annotation.Cache;
+import com.coyee.cache.annotation.Flush;
 import com.coyee.cache.bean.Data;
 import com.coyee.cache.bean.KeyGenerator;
 import com.coyee.cache.exception.CacheException;
 import com.coyee.cache.generator.CacheKeyGenerator;
 import com.coyee.cache.store.ICacheTemplate;
-import com.coyee.cache.annotation.Cache;
-import com.coyee.cache.annotation.Flush;
 import com.coyee.cache.utils.JSONUtils;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
@@ -20,13 +20,14 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.aop.aspectj.MethodInvocationProceedingJoinPoint;
 import org.springframework.context.expression.AnnotatedElementKey;
 import org.springframework.expression.EvaluationContext;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 缓存管理器
@@ -41,6 +42,18 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
      * 是否启用环境管理
      */
     private boolean disabled = false;
+    /**
+     * 记录频道的上次刷新时间
+     */
+    private Map<String, Long> lastFlushMills = new HashMap<>();
+    /**
+     * 最小刷新间隔，若小于此间隔将不刷新
+     */
+    private long minFlushInterval = 300;
+    /**
+     * 默认过期时间：10分钟
+     */
+    private long defaultExpires = 1000 * 60 * 10;
 
     @PostConstruct
     private void init() {
@@ -89,7 +102,7 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
         this.executeBeforeHandler(methodJp, config);
         //执行前缀方法结束
         String key = createKey(methodJp, config);
-        log.debug("处理["+methodJp.getSignature()+"]的获取缓存请求,当前key为:"+key);
+        log.debug("处理[" + methodJp.getSignature() + "]的获取缓存请求,当前key为:" + key);
         Object data = cacheTemplate.get(key);
         if (data != null) {
             if (data instanceof Data) {
@@ -107,6 +120,7 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
         Serializable raw = (Serializable) jp.proceed();
         raw = this.executeAfterHandler(methodJp, config, raw);
         long expires = config.expire();
+        expires = expires == -1 ? defaultExpires : expires;//如果未设置过期时间就采用默认过期时间
         if (log.isDebugEnabled()) {
             log.debug("使用key[" + key + "]设置缓存，过期时间:" + expires);
         }
@@ -166,7 +180,7 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
         if (this.disabled == true) {
             return methodJp.proceed();
         }
-        log.debug("处理["+methodJp.getSignature()+"]的刷新缓存请求。。。");
+        log.debug("处理[" + methodJp.getSignature() + "]的刷新缓存请求。。。");
         Flush config = this.getMethodAnnotation(methodJp, Flush.class);
         String[] channels = config.channels();
         String execOrder = config.execOrder();
@@ -196,7 +210,17 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
             return;
         }
         for (String channel : channels) {
-            cacheTemplate.clearChannelAndCache(channel);
+            Long lastFlushMills = this.lastFlushMills.get(channel);
+            lastFlushMills = lastFlushMills == null ? 0L : lastFlushMills;
+            long currentMills = System.currentTimeMillis();
+            long flushInterval = currentMills - lastFlushMills;
+            if (flushInterval > minFlushInterval) {
+                cacheTemplate.clearChannelAndCache(channel);
+                currentMills = System.currentTimeMillis();
+                this.lastFlushMills.put(channel, currentMills);
+            } else {
+                log.debug("[" + channel + "]的刷新间隔过低，本次不刷新。");
+            }
         }
     }
 
@@ -217,7 +241,6 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
             Class clazz = target.getClass();
             Method method = methodSignature.getMethod();
             Object[] params = methodJp.getArgs();
-            String paramsString = JSONUtils.objectToString(params);
             if (isDebug()) {
                 key = CacheKeyGenerator.generateDebugKey(clazz, method, params);
             } else if (keyGenerator == KeyGenerator.Signature) {
@@ -306,4 +329,11 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
         }
     }
 
+    public long getMinFlushInterval() {
+        return minFlushInterval;
+    }
+
+    public void setMinFlushInterval(long minFlushInterval) {
+        this.minFlushInterval = minFlushInterval;
+    }
 }

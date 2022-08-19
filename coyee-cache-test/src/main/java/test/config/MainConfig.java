@@ -22,6 +22,8 @@ public class MainConfig {
 
     @Bean
     public CoyeeCacheAspectSupport coyeeCacheAspectSupport(){
-        return new CoyeeCacheAspectSupport();
+        CoyeeCacheAspectSupport coyeeCacheAspectSupport= new CoyeeCacheAspectSupport();
+        coyeeCacheAspectSupport.setMinFlushInterval(1000);
+        return coyeeCacheAspectSupport;
     }
 }

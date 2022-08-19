@@ -13,7 +13,8 @@
         <module>coyee-cache-core</module>
         <module>coyee-cache-redis</module>
         <module>coyee-cache-mybatis</module>
-        <module>coyee-cache-test</module>
+        <module>coyee-cache-console</module>
+<!--        <module>coyee-cache-test</module>-->
     </modules>
 
     <properties>

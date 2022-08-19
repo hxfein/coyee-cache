@@ -95,4 +95,15 @@ public class TestController {
             return "error";
         }
     }
+
+    @RequestMapping("/test3")
+    @ResponseBody
+    public String test3(){
+        for(int i=0;i<10000;i++){
+            testService.getUserAndRoleList("",Math.random()+"",10);
+            testService.updateRole(Collections.emptyMap());
+            testService.updateUser(Collections.emptyMap());
+        }
+        return "success";
+    }
 }
