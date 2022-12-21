@@ -14,7 +14,7 @@ import java.lang.annotation.*;
 @Documented
 public @interface Flush {
     /**
-     * 缓存KEY,若指定了keygenerator则该设置无效
+     * 指定该刷新操作影响的频道
      * @return
      */
     String[] channels() default "";

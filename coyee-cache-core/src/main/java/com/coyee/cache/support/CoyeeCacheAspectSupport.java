@@ -336,4 +336,12 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
     public void setMinFlushInterval(long minFlushInterval) {
         this.minFlushInterval = minFlushInterval;
     }
+
+    public long getDefaultExpires() {
+        return defaultExpires;
+    }
+
+    public void setDefaultExpires(long defaultExpires) {
+        this.defaultExpires = defaultExpires;
+    }
 }

@@ -10,7 +10,6 @@ import javax.annotation.Resource;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Collection;
-import java.util.Set;
 
 /**
  * @author hxfein
@@ -44,6 +43,25 @@ public abstract class AbstractRedisCacheTemplate implements ICacheTemplate {
      * 是否启用严格的一致性保护
      */
     protected boolean strict = true;
+
+    /**
+     * 清除channel下无效的key
+     * @param channel
+     */
+    public abstract long clearInvalidChannelKeys(String channel);
+
+    /**
+     * 查询当前数据库ID
+     * @return
+     */
+    public abstract long getDbIndex();
+
+    /**
+     * 处理key过期事件
+     * @param message
+     * @return 返回true表示已处理,返回false表示交由下一个处理器处理
+     */
+    public abstract boolean handleKeyExpiredMessage(String message);
 
 
     @PostConstruct
@@ -115,31 +133,21 @@ public abstract class AbstractRedisCacheTemplate implements ICacheTemplate {
     }
 
     /**
-     * 创建关联关系存储键
-     *
+     * 清除栏目数据定时器key
      * @param channel
      * @return
      */
-    protected String createLinkKey(String channel) {
-        return namespace + ":links:" + channel;
+    protected String createTimerKey(String channel) {
+        return namespace + ":timer:" + channel;
     }
 
     /**
-     * 创建锁存储键
-     *
-     * @param channel
+     * 获取定时器KEY的前缀
      * @return
      */
-    protected String createLockKey(String channel) {
-        return namespace + ":locks:" + channel;
+    public String getTimerKeyPrefix() {
+        return namespace + ":timer:";
     }
-    
-    
-    
-    
-    
-    
-    
 
 
     public String getNamespace() {
@@ -172,13 +180,5 @@ public abstract class AbstractRedisCacheTemplate implements ICacheTemplate {
 
     public void setStrict(boolean strict) {
         this.strict = strict;
-    }
-    /**
-     * 定义栏目关联的关系
-     */
-    class ChannelBlock {
-        String channelKey;
-        String linkKey;
-        Set<Serializable> keySet;
     }
 }

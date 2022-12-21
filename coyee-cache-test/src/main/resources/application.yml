@@ -21,5 +21,11 @@ spring:
         max-wait: -1m
     password: 123456
     database: 11
+  rabbitmq:
+    host: 172.16.9.20
+    post: 5672
+    username: dayuding
+    password: wisesoft123
+    virtual-host: /test2022
 server:
   port: 7777

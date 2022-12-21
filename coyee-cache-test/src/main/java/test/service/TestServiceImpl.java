@@ -46,7 +46,7 @@ public class TestServiceImpl implements TestService{
         return result;
     }
 
-    @Cache(channels = {"user"},beforeExec = "getRoleList$Before",afterExec = "getRoleList$After")
+    @Cache(channels = {"role"},beforeExec = "getRoleList$Before",afterExec = "getRoleList$After")
     public List<Map<String, Object>> getRoleList(String keyword) {
         List<Map<String,Object>> list=new ArrayList<>();
         Map<String,Object> bean=new HashMap<>();
