@@ -5,7 +5,7 @@ import java.lang.annotation.*;
 
 /**
  * @author hxfein
- * @className: CyCache
+ * @className: Cache
  * @description: 标记业务方法使用缓存
  * @date 2022/4/25 11:21
  * @version：1.0

@@ -1,5 +1,7 @@
 package com.coyee.cache.support;
 
+import java.util.Map;
+
 /**
  * @author hxfein
  * @className: CoyeeCacheManager
@@ -13,4 +15,10 @@ public interface CoyeeCacheSupport {
      * @param channels
      */
     void flushChannelKeysAndCache(String[] channels);
+
+    /**
+     * 获取统计信息
+     * @return
+     */
+    Map<String,Object> getStats();
 }

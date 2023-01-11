@@ -36,6 +36,8 @@ import java.util.Map;
 public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
     private static final Log log = LogFactory.getLog(CoyeeCacheAspectSupport.class);
     private ExpressionEvaluator evaluator = new ExpressionEvaluator();
+    private long queryCount=0;
+    private long hitCount=0;
     @Resource
     private ICacheTemplate cacheTemplate;
     /**
@@ -97,6 +99,7 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
         if (this.disabled == true) {
             return methodJp.proceed();
         }
+        this.queryCount++;
         Cache config = this.getMethodAnnotation(methodJp, Cache.class);
         //执行前置方法
         this.executeBeforeHandler(methodJp, config);
@@ -111,6 +114,7 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
                 }
                 Serializable result = ((Data) data).getRawData();
                 result = this.executeAfterHandler(methodJp, config, result);
+                this.hitCount++;
                 return result;
             }
         }
@@ -343,5 +347,18 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
 
     public void setDefaultExpires(long defaultExpires) {
         this.defaultExpires = defaultExpires;
+    }
+
+    @Override
+    public Map<String,Object> getStats() {
+        Map<String,Object> stats=new HashMap<>();
+        stats.put("queryCount",queryCount);
+        stats.put("hitCount",hitCount);
+        double percent=-1;
+        if(this.queryCount>0){
+            percent=(double)this.hitCount/(double)this.queryCount;
+        }
+        stats.put("percent",percent);
+        return stats;
     }
 }
