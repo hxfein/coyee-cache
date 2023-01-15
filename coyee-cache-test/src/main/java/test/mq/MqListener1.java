@@ -18,6 +18,6 @@ public class MqListener1 {
     @RabbitListener(queues = "testQueue1")
     @RabbitHandler
     public void process(String str) {
-        System.out.println("aaaaaaaaaaaaaaaa:"+str);
+        System.out.println("aaaaaaaaaaaaaaaa:" + str);
     }
 }

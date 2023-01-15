@@ -18,6 +18,6 @@ public class MqListener3 {
     @RabbitListener(queues = "testQueue3")
     @RabbitHandler
     public void process(String str) {
-        System.out.println("delaydelaydelay:"+str);
+        System.out.println("delaydelaydelay:" + str);
     }
 }

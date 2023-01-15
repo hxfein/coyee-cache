@@ -13,8 +13,11 @@ import java.util.Map;
  * @version：1.0
  */
 public interface TestService {
-    List<Map<String,Object>> getUserAndRoleList(String orderBy,String keyword,int limit);
-    List<Map<String,Object>> getRoleList(String keyword);
+    List<Map<String, Object>> getUserAndRoleList(String orderBy, String keyword, int limit);
+
+    List<Map<String, Object>> getRoleList(String keyword);
+
     void updateUser(Map<String, Object> bean);
+
     void updateRole(Map<String, Object> bean);
 }

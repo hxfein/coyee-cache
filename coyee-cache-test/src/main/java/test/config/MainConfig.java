@@ -20,20 +20,22 @@ public class MainConfig {
     private RedisConnectionFactory redisConnectionFactory;
     @Resource
     private RedisTemplate<Serializable, Serializable> redisTemplate;
+
     @Bean
-    public DefaultRedisCacheTemplate getRedisCacheTemplate(){
-        return new DefaultRedisCacheTemplate(redisConnectionFactory,redisTemplate);
+    public DefaultRedisCacheTemplate getRedisCacheTemplate() {
+        return new DefaultRedisCacheTemplate(redisConnectionFactory, redisTemplate);
     }
+
     @Bean
-    public RedisMessageListenerContainer getMessageListenerContainer(){
-        DefaultRedisCacheTemplate cacheTemplate=this.getRedisCacheTemplate();
-        KeyExpiredMesssageListenerContainer listenerContainer = new KeyExpiredMesssageListenerContainer(redisConnectionFactory,cacheTemplate,11);
+    public RedisMessageListenerContainer getMessageListenerContainer() {
+        DefaultRedisCacheTemplate cacheTemplate = this.getRedisCacheTemplate();
+        KeyExpiredMesssageListenerContainer listenerContainer = new KeyExpiredMesssageListenerContainer(redisConnectionFactory, cacheTemplate, 11);
         return listenerContainer;
     }
 
     @Bean
-    public CoyeeCacheAspectSupport coyeeCacheAspectSupport(){
-        CoyeeCacheAspectSupport coyeeCacheAspectSupport= new CoyeeCacheAspectSupport();
+    public CoyeeCacheAspectSupport coyeeCacheAspectSupport() {
+        CoyeeCacheAspectSupport coyeeCacheAspectSupport = new CoyeeCacheAspectSupport();
         coyeeCacheAspectSupport.setMinFlushInterval(1000);
         return coyeeCacheAspectSupport;
     }

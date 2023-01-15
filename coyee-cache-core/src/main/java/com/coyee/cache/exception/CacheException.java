@@ -7,14 +7,14 @@ package com.coyee.cache.exception;
  * @date 2022/4/27 16:25
  * @version：1.0
  */
-public class CacheException extends RuntimeException{
+public class CacheException extends RuntimeException {
 
-    public CacheException(String msg){
+    public CacheException(String msg) {
         super(msg);
     }
 
-    public CacheException(String msg,Throwable throwable){
-        super(msg,throwable);
+    public CacheException(String msg, Throwable throwable) {
+        super(msg, throwable);
     }
 
 }

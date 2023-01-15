@@ -12,13 +12,15 @@ import java.util.Map;
 public interface CoyeeCacheSupport {
     /**
      * 刷新对应栏目的缓存
+     *
      * @param channels
      */
     void flushChannelKeysAndCache(String[] channels);
 
     /**
      * 获取统计信息
+     *
      * @return
      */
-    Map<String,Object> getStats();
+    Map<String, Object> getStats();
 }

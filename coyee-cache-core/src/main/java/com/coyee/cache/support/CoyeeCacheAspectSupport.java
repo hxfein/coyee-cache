@@ -36,8 +36,8 @@ import java.util.Map;
 public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
     private static final Log log = LogFactory.getLog(CoyeeCacheAspectSupport.class);
     private ExpressionEvaluator evaluator = new ExpressionEvaluator();
-    private long queryCount=0;
-    private long hitCount=0;
+    private long queryCount = 0;
+    private long hitCount = 0;
     @Resource
     private ICacheTemplate cacheTemplate;
     /**
@@ -350,15 +350,15 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
     }
 
     @Override
-    public Map<String,Object> getStats() {
-        Map<String,Object> stats=new HashMap<>();
-        stats.put("queryCount",queryCount);
-        stats.put("hitCount",hitCount);
-        double percent=-1;
-        if(this.queryCount>0){
-            percent=(double)this.hitCount/(double)this.queryCount;
+    public Map<String, Object> getStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("queryCount", queryCount);
+        stats.put("hitCount", hitCount);
+        double percent = -1;
+        if (this.queryCount > 0) {
+            percent = (double) this.hitCount / (double) this.queryCount;
         }
-        stats.put("percent",percent);
+        stats.put("percent", percent);
         return stats;
     }
 }

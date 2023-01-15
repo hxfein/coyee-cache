@@ -10,7 +10,7 @@ import java.io.Serializable;
  * @version：1.0
  */
 public class Partition implements Serializable {
-    public static final String MASTER="master";
+    public static final String MASTER = "master";
     /**
      * 分区类型
      */
@@ -18,7 +18,7 @@ public class Partition implements Serializable {
     /**
      * 分区关键字
      */
-    private String partitionKey=MASTER;
+    private String partitionKey = MASTER;
 
 
     public PartitionType getPartitionType() {

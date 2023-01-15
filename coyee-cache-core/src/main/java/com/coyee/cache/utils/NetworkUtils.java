@@ -16,6 +16,7 @@ import java.util.Enumeration;
 public class NetworkUtils {
     /**
      * 获取本机IP地址
+     *
      * @return
      */
     public static InetAddress getLocalHostLANAddress() {
@@ -45,16 +46,17 @@ public class NetworkUtils {
             InetAddress jdkSuppliedAddress = InetAddress.getLocalHost();
             return jdkSuppliedAddress;
         } catch (Exception e) {
-            throw new CacheException("获取IP地址出错",e);
+            throw new CacheException("获取IP地址出错", e);
         }
     }
 
     /**
      * 获取本地IP地址
+     *
      * @return
      */
-    public static String getLocalHostLANIP(){
-        InetAddress address=getLocalHostLANAddress();
+    public static String getLocalHostLANIP() {
+        InetAddress address = getLocalHostLANAddress();
         return address.getHostAddress();
     }
 }

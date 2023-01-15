@@ -46,20 +46,23 @@ public abstract class AbstractRedisCacheTemplate implements ICacheTemplate {
 
     /**
      * 清除channel下无效的key
+     *
      * @param channel
      */
     public abstract long clearInvalidChannelKeys(String channel);
 
     /**
      * 查询当前数据库ID
+     *
      * @return
      */
     public abstract long getDbIndex();
 
     /**
      * 处理key过期事件
+     *
      * @param message
-     * @return 返回true表示已处理,返回false表示交由下一个处理器处理
+     * @return 返回true表示已处理, 返回false表示交由下一个处理器处理
      */
     public abstract boolean handleKeyExpiredMessage(String message);
 
@@ -134,6 +137,7 @@ public abstract class AbstractRedisCacheTemplate implements ICacheTemplate {
 
     /**
      * 清除栏目数据定时器key
+     *
      * @param channel
      * @return
      */
@@ -143,6 +147,7 @@ public abstract class AbstractRedisCacheTemplate implements ICacheTemplate {
 
     /**
      * 获取定时器KEY的前缀
+     *
      * @return
      */
     public String getTimerKeyPrefix() {

@@ -42,13 +42,13 @@ public class KeyExpiredMesssageListenerContainer extends RedisMessageListenerCon
     }
 
     public KeyExpiredMesssageListenerContainer(RedisConnectionFactory connectionFactory, AbstractRedisCacheTemplate redisCacheTemplate) {
-        this(connectionFactory, redisCacheTemplate, Collections.emptyList(),-1);
-        this.dbIndex=(int)redisCacheTemplate.getDbIndex();
+        this(connectionFactory, redisCacheTemplate, Collections.emptyList(), -1);
+        this.dbIndex = (int) redisCacheTemplate.getDbIndex();
     }
 
     public KeyExpiredMesssageListenerContainer(RedisConnectionFactory connectionFactory, AbstractRedisCacheTemplate redisCacheTemplate, List<KeyExpiredMessageHandler> messageHandlers) {
-        this(connectionFactory, redisCacheTemplate, messageHandlers,-1);
-        this.dbIndex=(int)redisCacheTemplate.getDbIndex();
+        this(connectionFactory, redisCacheTemplate, messageHandlers, -1);
+        this.dbIndex = (int) redisCacheTemplate.getDbIndex();
     }
 
     public KeyExpiredMesssageListenerContainer(RedisConnectionFactory connectionFactory, AbstractRedisCacheTemplate redisCacheTemplate, List<KeyExpiredMessageHandler> messageHandlers, int dbIndex) {
@@ -91,7 +91,7 @@ public class KeyExpiredMesssageListenerContainer extends RedisMessageListenerCon
             Properties config = this.getConfig(connection, "notify-keyspace-events");
             if (config == null) {
                 logger.warn("你使用的redis api不支持自动开启通知选项，请手动开启");
-            }else {
+            } else {
                 if (!StringUtils.isBlank(config.getProperty("notify-keyspace-events"))) {
                     connection.setConfig("notify-keyspace-events", "KEA");
                 }

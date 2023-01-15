@@ -93,20 +93,21 @@ public class DefaultRedisCacheTemplate extends AbstractRedisCacheTemplate {
             this.putRelationToSet(channelKey, key);//不存储路径，减少存储消耗
             String timerKey = this.createTimerKey(channel);
             //存放定时器key,当该key过期时触发定时器清除无效KEY,每天一次
-            this.setIfAbsent(timerKey,System.currentTimeMillis(),this.clearInvalidKeysInterval,TimeUnit.MILLISECONDS);
+            this.setIfAbsent(timerKey, System.currentTimeMillis(), this.clearInvalidKeysInterval, TimeUnit.MILLISECONDS);
         }
     }
 
     /**
      * setifabsent实现，兼容旧版本API
+     *
      * @param key
      * @param value
      * @param expires
      * @param timeUnit
      */
-    private void setIfAbsent(String key, Serializable value,long expires, TimeUnit timeUnit){
-        redisTemplate.opsForValue().setIfAbsent(key,value);
-        redisTemplate.expire(key, expires,timeUnit);
+    private void setIfAbsent(String key, Serializable value, long expires, TimeUnit timeUnit) {
+        redisTemplate.opsForValue().setIfAbsent(key, value);
+        redisTemplate.expire(key, expires, timeUnit);
     }
 
     /**
@@ -132,7 +133,7 @@ public class DefaultRedisCacheTemplate extends AbstractRedisCacheTemplate {
         Long removeCount = redisTemplate.execute(clearInvalidKeysScript, keys);
         removeCount = removeCount == null ? 0 : removeCount;
         if (redisTemplate.hasKey(channelKey)) {
-            this.setIfAbsent(timerKey,System.currentTimeMillis(),this.clearInvalidKeysInterval,TimeUnit.MILLISECONDS);
+            this.setIfAbsent(timerKey, System.currentTimeMillis(), this.clearInvalidKeysInterval, TimeUnit.MILLISECONDS);
         }
         return removeCount;
     }

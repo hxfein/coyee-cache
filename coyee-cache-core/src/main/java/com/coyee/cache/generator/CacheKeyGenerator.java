@@ -39,12 +39,13 @@ public class CacheKeyGenerator {
 
     /**
      * 根据方法签名和参数生成调试key
+     *
      * @param clazz
      * @param method
      * @param params
      * @return
      */
-    public static String generateDebugKey(Class clazz, Method method, Object[] params){
+    public static String generateDebugKey(Class clazz, Method method, Object[] params) {
         String clazzName = clazz.getName();
         String methodName = method.getName();
         StringBuilder buffer = new StringBuilder();

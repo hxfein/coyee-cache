@@ -26,14 +26,14 @@ public class MapCacheTemplate implements ICacheTemplate {
 
     @Override
     public void clearChannelAndCache(String channel) {
-        Set<String> linkSet=linkChannelMap.get(channel);
-        if(linkSet==null){
+        Set<String> linkSet = linkChannelMap.get(channel);
+        if (linkSet == null) {
             return;
         }
-        for(String linkChannel:linkSet){
+        for (String linkChannel : linkSet) {
             //删除缓存数据
-            Set<Serializable> keySet=channelKeysMap.get(linkChannel);
-            for(Serializable key:keySet){
+            Set<Serializable> keySet = channelKeysMap.get(linkChannel);
+            for (Serializable key : keySet) {
                 cacheMap.remove(key);
             }
             //删除栏目与数据的关联
@@ -46,23 +46,23 @@ public class MapCacheTemplate implements ICacheTemplate {
     @Override
     public void putChannelAndCache(String key, String[] channels, Serializable raw, long expires) {
         //保存缓存数据
-        cacheMap.put(key,new Data(raw));
-        for(String channel:channels){
+        cacheMap.put(key, new Data(raw));
+        for (String channel : channels) {
             //保存栏目与缓存数据的关联关系
-            Set<Serializable> keySet=channelKeysMap.get(channel);
-            if(keySet==null){
-                keySet=new HashSet<>();
+            Set<Serializable> keySet = channelKeysMap.get(channel);
+            if (keySet == null) {
+                keySet = new HashSet<>();
             }
             keySet.add(key);
-            channelKeysMap.put(channel,keySet);
+            channelKeysMap.put(channel, keySet);
 
             //保存栏目与其它栏目的关联关系
-            Set<String> linkSet=linkChannelMap.get(channel);
-            if(linkSet==null){
-                linkSet=new HashSet<>();
+            Set<String> linkSet = linkChannelMap.get(channel);
+            if (linkSet == null) {
+                linkSet = new HashSet<>();
             }
             linkSet.addAll(Arrays.asList(channels));
-            linkChannelMap.put(channel,linkSet);
+            linkChannelMap.put(channel, linkSet);
         }
     }
 }

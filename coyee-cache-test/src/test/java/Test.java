@@ -19,10 +19,10 @@ public class Test {
     static AtomicInteger count = new AtomicInteger(0);
 
     public static void main(String[] args) {
-        ExecutorService executorService=Executors.newFixedThreadPool(30);
-        for(int i=0;i<100000;i++) {
+        ExecutorService executorService = Executors.newFixedThreadPool(30);
+        for (int i = 0; i < 100000; i++) {
             executorService.execute(new GetThread());
-            if(i%200==0) {
+            if (i % 200 == 0) {
                 executorService.execute(new UpdateThread());
             }
             sleep(100);
@@ -31,22 +31,22 @@ public class Test {
 
     static class GetThread implements Runnable {
         public void run() {
-            String urlStr="http://localhost:7777/getUserAndRoleList?keyword="+ RandomStringUtils.random(5,"abcdefghijjklsas");
-            String url=String.format(urlStr);
-            long start=System.currentTimeMillis();
-            String result=catchUrl(url);
-            long end=System.currentTimeMillis();
-            System.out.println("****获取数据结果:"+result+"，用时:"+(end-start)+"   "+urlStr);
+            String urlStr = "http://localhost:7777/getUserAndRoleList?keyword=" + RandomStringUtils.random(5, "abcdefghijjklsas");
+            String url = String.format(urlStr);
+            long start = System.currentTimeMillis();
+            String result = catchUrl(url);
+            long end = System.currentTimeMillis();
+            System.out.println("****获取数据结果:" + result + "，用时:" + (end - start) + "   " + urlStr);
         }
     }
 
     static class UpdateThread implements Runnable {
         public void run() {
-            String url=String.format("http://localhost:7777/updateRole?keyword="+Math.random());
-            long start=System.currentTimeMillis();
-            String result=catchUrl(url);
-            long end=System.currentTimeMillis();
-            System.out.println("====更新数据结果:"+result+"，用时:"+(end-start));
+            String url = String.format("http://localhost:7777/updateRole?keyword=" + Math.random());
+            long start = System.currentTimeMillis();
+            String result = catchUrl(url);
+            long end = System.currentTimeMillis();
+            System.out.println("====更新数据结果:" + result + "，用时:" + (end - start));
         }
     }
 
@@ -60,10 +60,11 @@ public class Test {
             throw new RuntimeException(er);
         }
     }
-    private static void sleep(long millis){
-        try{
+
+    private static void sleep(long millis) {
+        try {
             Thread.sleep(millis);
-        }catch(Exception er){
+        } catch (Exception er) {
 
         }
     }

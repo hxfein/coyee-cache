@@ -16,6 +16,7 @@ import java.util.Set;
 public interface ICacheTemplate {
     /**
      * 获取缓存数据
+     *
      * @param key
      * @return
      */
@@ -23,17 +24,19 @@ public interface ICacheTemplate {
 
     /**
      * 删除栏目缓存数据和相关关联数据
+     *
      * @param channel
      */
     void clearChannelAndCache(String channel);
 
     /**
      * 保存数据到缓存并建立关联
+     *
      * @param key
      * @param channels
      * @param raw
      * @param expires
      */
-    void putChannelAndCache(String key, String[] channels, Serializable raw,long expires);
+    void putChannelAndCache(String key, String[] channels, Serializable raw, long expires);
 
 }

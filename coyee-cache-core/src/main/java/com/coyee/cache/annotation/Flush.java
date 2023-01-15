@@ -15,12 +15,14 @@ import java.lang.annotation.*;
 public @interface Flush {
     /**
      * 指定该刷新操作影响的频道
+     *
      * @return
      */
     String[] channels() default "";
 
     /**
      * 执行顺序（after：在方法调用后，before:在方法调用前）
+     *
      * @return
      */
     String execOrder() default "after";

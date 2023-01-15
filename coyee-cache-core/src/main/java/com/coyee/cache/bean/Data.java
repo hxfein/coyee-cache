@@ -16,10 +16,11 @@ public class Data implements Serializable {
      */
     private Serializable rawData;
 
-    public Data(){}
+    public Data() {
+    }
 
-    public Data(Serializable rawData){
-        this.rawData=rawData;
+    public Data(Serializable rawData) {
+        this.rawData = rawData;
     }
 
     public Serializable getRawData() {
