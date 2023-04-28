@@ -1,5 +1,6 @@
 package com.coyee.cache.support;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
@@ -16,7 +17,30 @@ public interface CoyeeCacheSupport {
      * @param channels
      */
     void flushChannelKeysAndCache(String[] channels);
+    /**
+     * 保存数据到缓存并建立关联
+     *
+     * @param key
+     * @param channels
+     * @param raw
+     * @param expires
+     */
+    void putChannelAndCache(String key, String[] channels, Serializable raw, long expires);
 
+    /**
+     * 保存数据到缓存并建立关联
+     * @param key
+     * @param channels
+     * @param raw
+     */
+    void putChannelAndCache(String key, String[] channels, Serializable raw);
+
+    /**
+     * 从缓存中取值
+     * @param key
+     * @return
+     */
+    Serializable get(String key);
     /**
      * 获取统计信息
      *

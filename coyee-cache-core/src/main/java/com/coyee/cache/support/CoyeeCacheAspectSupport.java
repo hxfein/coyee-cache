@@ -53,9 +53,9 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
      */
     private long minFlushInterval = 300;
     /**
-     * 默认过期时间：10分钟
+     * 默认过期时间：30分钟
      */
-    private long defaultExpires = 1000 * 60 * 10;
+    private long defaultExpires = 1000 * 60 * 30;
 
     @PostConstruct
     private void init() {
@@ -131,6 +131,22 @@ public class CoyeeCacheAspectSupport implements CoyeeCacheSupport {
         String[] channels = config.channels();
         cacheTemplate.putChannelAndCache(key, channels, raw, expires);
         return raw;
+    }
+
+    @Override
+    public void putChannelAndCache(String key, String[] channels, Serializable raw, long expires) {
+        cacheTemplate.putChannelAndCache(key, channels, raw, expires);
+    }
+
+    @Override
+    public void putChannelAndCache(String key, String[] channels, Serializable raw) {
+        cacheTemplate.putChannelAndCache(key, channels, raw, defaultExpires);
+    }
+
+    @Override
+    public Serializable get(String key) {
+        Data data = (Data) cacheTemplate.get(key);
+        return data == null ? null : data.getRawData();
     }
 
     /**
